@@ -1,88 +1,91 @@
-import React from 'react';
+import { AgentStep } from '@/types';
 import { Check } from 'lucide-react';
-import type { AgentStep } from '../../types';
 
 interface AgentStepsProps {
   steps: AgentStep[];
-  currentStep: number;
 }
 
-export function AgentSteps({ steps, currentStep }: AgentStepsProps) {
+export function AgentSteps({ steps }: AgentStepsProps) {
+  const completedCount = steps.filter(s => s.status === 'completed').length;
+
   return (
-    <div className="space-y-0">
-      {steps.map((step, index) => {
-        const isDone = step.status === 'done';
-        const isActive = step.status === 'active';
-        const isPending = step.status === 'pending';
-        const isError = step.status === 'error';
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm text-text-secondary">分析进度</span>
+        <span className="text-sm text-text-tertiary tabular-nums">{completedCount}/{steps.length} 步</span>
+      </div>
+      <div className="space-y-1">
+        {steps.map((step, index) => (
+          <AgentStepItem key={step.id} step={step} index={index} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-        return (
-          <div key={step.id} className="relative">
-            {/* Row */}
-            <div
-              className={`flex items-start gap-3 py-2 px-3 rounded-lg transition-all duration-300 ${
-                isActive ? 'bg-accent/5' : 'bg-transparent'
-              }`}
-            >
-              {/* Status Icon */}
-              <div className="flex-shrink-0 mt-0.5 w-5 h-5">
-                {isDone && (
-                  <div className="w-5 h-5 rounded-full bg-success flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" strokeWidth={2.5} />
-                  </div>
-                )}
-                {isActive && (
-                  <div className="relative w-5 h-5">
-                    <div
-                      className="absolute inset-0 rounded-full bg-accent step-active-pulse"
-                    />
-                    <div className="relative w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                    </div>
-                  </div>
-                )}
-                {isPending && (
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-200" />
-                )}
-                {isError && (
-                  <div className="w-5 h-5 rounded-full bg-error flex items-center justify-center">
-                    <span className="text-white text-[10px] font-bold">!</span>
-                  </div>
-                )}
-              </div>
+function AgentStepItem({ step, index }: { step: AgentStep; index: number }) {
+  const statusConfig = {
+    pending: {
+      dot: 'bg-gray-200',
+      text: 'text-text-tertiary',
+      label: '等待中',
+    },
+    running: {
+      dot: 'bg-amber-400',
+      text: 'text-primary',
+      label: '进行中',
+    },
+    completed: {
+      dot: 'bg-green-500',
+      text: 'text-primary',
+      label: '已完成',
+    },
+    error: {
+      dot: 'bg-red-500',
+      text: 'text-red-600',
+      label: '失败',
+    },
+  };
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <p
-                  className={`text-sm leading-snug transition-colors duration-200 ${
-                    isActive
-                      ? 'font-medium text-accent'
-                      : isDone
-                      ? 'text-secondary'
-                      : isError
-                      ? 'text-error font-medium'
-                      : 'text-tertiary'
-                  }`}
-                >
-                  {step.label}
-                </p>
-                {isDone && step.timestamp && (
-                  <p className="text-[11px] text-tertiary mt-0.5">{step.timestamp}</p>
-                )}
-              </div>
-            </div>
+  const config = statusConfig[step.status];
 
-            {/* Connector — below each row except last */}
-            {index < steps.length - 1 && (
-              <div
-                className={`ml-[22px] w-0.5 h-4 transition-colors duration-500 ${
-                  index < currentStep ? 'bg-success/50' : 'bg-gray-100'
-                }`}
-              />
-            )}
+  return (
+    <div
+      className="flex items-start gap-3 py-2.5 transition-all duration-300"
+      style={{ animationDelay: `${index * 80}ms` }}
+    >
+      {/* Timeline indicator */}
+      <div className="flex flex-col items-center pt-1">
+        {step.status === 'completed' ? (
+          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center heartbeat">
+            <Check size={11} className="text-white" strokeWidth={3} />
           </div>
-        );
-      })}
+        ) : step.status === 'running' ? (
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-400 pulse-dot text-amber-400" />
+        ) : step.status === 'error' ? (
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+        ) : (
+          <div className="w-2.5 h-2.5 rounded-full bg-gray-200" />
+        )}
+        {index < 5 && (
+          <div className={`w-px h-8 mt-1 transition-colors duration-500 ${
+            step.status === 'completed' ? 'bg-green-500/40' : 'bg-border'
+          }`} />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium transition-colors duration-300 ${config.text}`}>
+            {step.name}
+          </span>
+          <span className={`text-xs ${config.text}`}>({config.label})</span>
+        </div>
+        {step.log && step.status !== 'pending' && (
+          <p className="text-xs text-text-tertiary mt-0.5 fade-in">{step.log}</p>
+        )}
+      </div>
     </div>
   );
 }

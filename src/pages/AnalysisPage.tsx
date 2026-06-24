@@ -1,371 +1,206 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, AlertTriangle, RefreshCw, Activity, ChevronRight } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
-import { createMockAnalysisResult } from '../data/mockData';
-import { AgentSteps } from '../components/features/AgentSteps';
-import { StreamOutput } from '../components/features/StreamOutput';
-import { ProgressBar } from '../components/ui/ProgressBar';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
+import { useEffect, useState } from 'react';
+import { useAppStore } from '@/store/appStore';
+import { NavBar } from '@/components/features/NavBar';
+import { AgentSteps } from '@/components/features/AgentSteps';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { mockQuestions } from '@/data/mockData';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
-const STEPS_NO_JD = [
-  '正在读取简历内容',
-  '正在识别目标岗位',
-  '正在分析岗位要求',
-  '正在对比简历与岗位要求',
-  '正在诊断简历问题',
-  '正在生成优化建议',
-  '正在生成优化后的简历版本',
-];
-
-const STEPS_WITH_JD = [
-  '正在读取简历内容',
-  '正在识别目标岗位',
-  '正在解析岗位 JD',
-  '正在提取岗位核心要求',
-  '正在对比简历与岗位要求',
-  '发现 4 个能力差距',
-  '正在生成优化建议',
-  '正在生成最终优化版本',
-];
-
-const STREAM_NO_JD = [
-  { text: '已读取简历内容，正在识别核心经历', type: 'info' as const },
-  { text: '检测到目标岗位：前端开发工程师', type: 'success' as const },
-  { text: '正在对比岗位要求与简历中的技能描述', type: 'thinking' as const },
-  { text: '已识别工作经历：字节跳动、腾讯', type: 'info' as const },
-  { text: '发现 4 个待优化问题', type: 'info' as const },
-  { text: '正在优化技术栈表达', type: 'thinking' as const },
-  { text: '正在生成最终优化建议', type: 'info' as const },
-];
-
-const STREAM_WITH_JD = [
-  { text: '已读取简历内容，正在识别核心经历', type: 'info' as const },
-  { text: '检测到目标岗位：前端开发工程师', type: 'success' as const },
-  { text: '正在解析岗位 JD...', type: 'thinking' as const },
-  { text: '已识别岗位 JD 中的核心要求：React、TypeScript、组件化、接口联调', type: 'success' as const },
-  { text: '正在检查简历中是否体现对应经验', type: 'thinking' as const },
-  { text: '已识别工作经历：字节跳动、腾讯', type: 'info' as const },
-  { text: '发现项目经历中缺少接口联调描述', type: 'info' as const },
-  { text: '发现技术栈表达与岗位关键词匹配不足', type: 'info' as const },
-  { text: '正在生成针对岗位要求的优化建议', type: 'thinking' as const },
-  { text: '正在生成最终优化版本', type: 'info' as const },
+const ANALYSIS_STEPS = [
+  {
+    id: 'step-1',
+    name: '读取简历',
+    logs: ['解析简历结构...', '提取关键信息完成']
+  },
+  {
+    id: 'step-2',
+    name: '分析目标岗位',
+    logs: ['识别岗位要求...', '匹配度分析中...']
+  },
+  {
+    id: 'step-3',
+    name: '提取关键技能',
+    logs: ['识别核心技能...', '分析项目经验...']
+  },
+  {
+    id: 'step-4',
+    name: '生成面试题',
+    logs: ['生成 5 道面试题...', '问题类型分配中...']
+  },
+  {
+    id: 'step-5',
+    name: '构建评分标准',
+    logs: ['建立评分维度...', '评分标准就绪']
+  },
+  {
+    id: 'step-6',
+    name: '准备就绪',
+    logs: ['准备完成']
+  },
 ];
 
 export function AnalysisPage() {
-  const { resume, job, jd, setPage, setAnalysisResult } = useAppStore();
-  const hasJD = !!(jd && jd.rawText && jd.rawText.trim().length > 0);
-  const STEPS = hasJD ? STEPS_WITH_JD : STEPS_NO_JD;
-  const STREAM = hasJD ? STREAM_WITH_JD : STREAM_NO_JD;
-  const STEP_COUNT = STEPS.length;
+  const {
+    agentSteps,
+    updateAgentStep,
+    addStreamLog,
+    setCurrentPage,
+    setQuestions,
+    error,
+    hideError,
+  } = useAppStore();
 
-  const [agentSteps, setAgentSteps] = useState<
-    { id: string; label: string; status: 'pending' | 'active' | 'done' | 'error'; timestamp?: string }[]
-  >([]);
-  const [messages, setMessages] = useState<
-    { id: string; text: string; timestamp: string; type: 'info' | 'thinking' | 'success' | 'error' }[]
-  >([]);
-  const [progress, setProgress] = useState(0);
-  const [isDone, setIsDone] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
-  const [runId, setRunId] = useState(0);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const msgIdx = useRef(0);
-
-  const clearAll = () => {
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-  };
-
-  const fmt = (sec: number) =>
-    `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-
-  const addMsg = (type: typeof STREAM[0]['type'], delay: number) => {
-    const t = setTimeout(() => {
-      const entry = STREAM[msgIdx.current];
-      if (!entry) return;
-      setMessages((m) => [...m, { id: `m${msgIdx.current}`, ...entry, timestamp: fmt(delay / 1000) }]);
-      msgIdx.current++;
-    }, delay);
-    timers.current.push(t);
-  };
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!resume || !job) return;
+    if (currentStepIndex >= ANALYSIS_STEPS.length) {
+      setIsComplete(true);
+      return;
+    }
 
-    clearAll();
-    setAgentSteps([]);
-    setMessages([]);
-    setProgress(0);
-    setIsDone(false);
-    setIsCompleting(false);
-    setIsError(false);
-    setShowError(false);
-    setHasAutoSubmitted(false);
-    msgIdx.current = 0;
+    const step = ANALYSIS_STEPS[currentStepIndex];
+    updateAgentStep(step.id, { status: 'running' });
 
-    const tick = (step: number, delay: number, donePercent: number) => {
-      timers.current.push(setTimeout(() => {
-        setAgentSteps((s) => s.map((x, i) => (i === step ? { ...x, status: 'active' } : x)));
-        setProgress(Math.max(0, donePercent - 10));
-      }, delay));
-
-      timers.current.push(setTimeout(() => {
-        setAgentSteps((s) => s.map((x, i) => {
-          if (i === step) return { ...x, status: 'done', timestamp: new Date().toLocaleTimeString() };
-          if (i === step + 1) return { ...x, status: 'active' };
-          return x;
-        }));
-        setProgress(donePercent);
-      }, delay + 700));
-    };
-
-    setAgentSteps(STEPS.map((label, i) => ({ id: `s${i}`, label, status: 'pending' })));
-
-    // 动态步数适配：有 JD 8 步，无 JD 7 步
-    const stepDelay = 1100;
-    const totalSteps = STEP_COUNT;
-    // 流式消息按 STREAM 顺序插入到对应步骤之间
-    const streamInterval = totalSteps > 0 ? Math.floor((stepDelay * totalSteps) / (STREAM.length + 1)) : stepDelay;
-
-    for (let i = 0; i < totalSteps; i++) {
-      const donePercent = Math.floor(((i + 1) / totalSteps) * 95);
-      tick(i, stepDelay * i, donePercent);
-
-      // 每个步骤后追加一条流式消息
-      if (i < STREAM.length) {
-        addMsg(STREAM[i].type, stepDelay * i + 400);
+    let logIndex = 0;
+    const logInterval = setInterval(() => {
+      if (logIndex < step.logs.length) {
+        addStreamLog(step.logs[logIndex]);
+        setLogs(prev => [...prev, step.logs[logIndex]]);
+        logIndex++;
+      } else {
+        clearInterval(logInterval);
+        updateAgentStep(step.id, { status: 'completed', log: step.logs[step.logs.length - 1] });
+        setCurrentStepIndex(prev => prev + 1);
       }
-    }
+    }, 1000);
 
-    timers.current.push(setTimeout(() => {
-      setAgentSteps((s) => s.map((x, i) => (i === s.length - 1 ? { ...x, status: 'done', timestamp: new Date().toLocaleTimeString() } : x)));
-      setProgress(100);
-      setIsDone(true);
-    }, stepDelay * totalSteps + 500));
+    return () => clearInterval(logInterval);
+  }, [currentStepIndex, updateAgentStep, addStreamLog]);
 
-    return clearAll;
-  }, [runId, resume, job, jd, STEP_COUNT, STEPS, STREAM]);
-
-  // Auto-submit when done — show completing state first, then jump to result
-  useEffect(() => {
-    if (isDone && !hasAutoSubmitted && resume && job) {
-      setIsCompleting(true);
-      const t = setTimeout(() => {
-        const result = createMockAnalysisResult(
-          {
-            rawText: resume.rawText,
-            fileName: resume.fileName,
-            fileSize: resume.fileSize,
-            uploadTime: resume.uploadTime,
-          },
-          {
-            title: job.title,
-            confidence: job.confidence,
-            isAutoDetected: job.isAutoDetected,
-          },
-          jd && jd.rawText
-            ? { rawText: jd.rawText, fileName: jd.fileName, uploadTime: jd.uploadTime }
-            : undefined
-        );
-        setHasAutoSubmitted(true);
-        setAnalysisResult(result);
-      }, 1000);
-      return () => clearTimeout(t);
-    }
-  }, [isDone, hasAutoSubmitted, resume, job, jd, setAnalysisResult]);
-
-  const handleViewResult = () => {
-    if (!resume || !job) return;
-    const result = createMockAnalysisResult(
-      {
-        rawText: resume.rawText,
-        fileName: resume.fileName,
-        fileSize: resume.fileSize,
-        uploadTime: resume.uploadTime,
-      },
-      {
-        title: job.title,
-        confidence: job.confidence,
-        isAutoDetected: job.isAutoDetected,
-      },
-      jd && jd.rawText
-        ? { rawText: jd.rawText, fileName: jd.fileName, uploadTime: jd.uploadTime }
-        : undefined
-    );
-    setHasAutoSubmitted(true);
-    setAnalysisResult(result);
+  const handleComplete = () => {
+    setQuestions(mockQuestions);
+    setCurrentPage('interview');
   };
 
-  const handleRetry = () => {
-    clearAll();
-    setRunId((n) => n + 1);
-  };
-
-  const handleBack = () => {
-    clearAll();
-    setPage('home');
-  };
-
-  if (!resume || !job) {
+  if (error.isOpen) {
     return (
-      <div className="min-h-screen bg-bg pt-24 flex items-center justify-center">
-        <p className="text-sm text-secondary">请先上传简历</p>
-        <Button variant="secondary" size="sm" onClick={() => setPage('home')} className="ml-4">
-          返回
-        </Button>
+      <div className="min-h-screen bg-white">
+        <NavBar showBack={true} onBack={() => setCurrentPage('home')} />
+        <main className="max-w-3xl mx-auto px-6 py-12">
+          <ErrorState
+            type={error.type}
+            title={error.title}
+            message={error.message}
+            onRetry={() => {
+              hideError();
+              setCurrentStepIndex(0);
+              setLogs([]);
+            }}
+          />
+        </main>
       </div>
     );
   }
 
+  const progressPercent = Math.round((currentStepIndex / ANALYSIS_STEPS.length) * 100);
+
   return (
-    <div className="min-h-screen bg-bg pt-20 pb-16">
-      <div className="max-w-5xl mx-auto px-6">
+    <div className="min-h-screen bg-white">
+      <NavBar showBack={true} onBack={() => setCurrentPage('home')} title="AI 分析中" />
+
+      <main className="max-w-3xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={handleBack}
-            className="p-2 rounded-lg text-secondary hover:text-primary hover:bg-gray-100 transition-all duration-150 active:scale-95"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-primary">简历分析中</h1>
-            <p className="text-sm text-secondary mt-0.5">
-              {job.title} · {resume.fileName || '文本简历'}
-              {hasJD && (
-                <span className="ml-2 text-[10px] font-medium text-accent bg-accent-light px-1.5 py-0.5 rounded">
-                  基于岗位 JD 分析
-                </span>
-              )}
-            </p>
+        <div className="mb-8 fade-in">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full pulse-dot text-amber-500" />
+            <span className="text-xs uppercase tracking-wider text-amber-600 font-medium">
+              Agent 工作中
+            </span>
           </div>
-          <div className="w-36">
-            <ProgressBar value={progress} showLabel />
-          </div>
+          <h1 className="text-h2 text-primary mb-2">正在分析你的简历</h1>
+          <p className="text-small text-text-secondary">
+            AI 正在认真分析你的背景和目标岗位，生成针对性的面试问题
+          </p>
         </div>
 
-        {/* Main */}
-        <div className="grid grid-cols-5 gap-6">
-          {/* Left */}
-          <Card className="col-span-2" padding="md">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="w-4 h-4 text-accent" />
-              <h2 className="text-sm font-semibold text-primary">分析步骤</h2>
-            </div>
-            <AgentSteps
-              steps={agentSteps}
-              currentStep={agentSteps.findIndex((s) => s.status === 'active')}
+        {/* Progress Bar */}
+        <div className="mb-6 fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-tiny text-text-secondary">整体进度</span>
+            <span className="text-tiny text-text-tertiary tabular-nums">{progressPercent}%</span>
+          </div>
+          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-black rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${progressPercent}%` }}
             />
-          </Card>
-
-          {/* Right */}
-          <Card className="col-span-3" padding="md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-primary">分析日志</h2>
-              {isDone && (
-                <span className="text-xs text-success flex items-center gap-1">
-                  <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  完成
-                </span>
-              )}
-            </div>
-            <div className="h-80 overflow-y-auto">
-              <StreamOutput messages={messages} isComplete={isDone} />
-            </div>
-          </Card>
+          </div>
         </div>
 
-        {/* Error State */}
-        {isError && showError && (
-          <Card className="mt-6 border-error/30 bg-error-light/30 animate-fade-in">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-error" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-primary mb-2">分析未能完成</h3>
-                <div className="space-y-2.5">
-                  <div>
-                    <p className="text-xs font-medium text-tertiary mb-1">发生了什么</p>
-                    <p className="text-sm text-secondary leading-relaxed">
-                      简历内容暂时无法被识别。
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-tertiary mb-1">为什么会这样</p>
-                    <p className="text-sm text-secondary leading-relaxed">
-                      文件可能是扫描件格式、加密文档，或文字编码异常。你可以重新上传文件，或直接粘贴简历文本继续分析。
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-5 ml-14">
-              <Button variant="primary" size="sm" onClick={handleRetry}>
-                <RefreshCw className="w-3.5 h-3.5" />
-                重新分析
-              </Button>
-              <Button variant="secondary" size="sm" onClick={handleBack}>
-                返回修改
-              </Button>
-            </div>
-          </Card>
-        )}
+        {/* Steps */}
+        <Card padding="lg" className="mb-6 slide-up" style={{ animationDelay: '200ms' }}>
+          <AgentSteps steps={agentSteps} />
+        </Card>
 
-        {/* Bottom Actions */}
-        <div className="mt-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {!isDone && !isError && (
-              <details className="group">
-                <summary className="text-xs text-tertiary hover:text-secondary cursor-pointer list-none flex items-center gap-1 select-none transition-colors">
-                  <svg className="w-3 h-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none">
-                    <path d="M4.5 3L7.5 6L4.5 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  排查问题
-                </summary>
-                <div className="mt-2 px-3 py-2 bg-gray-50 border border-border rounded-lg">
-                  <p className="text-xs text-tertiary mb-2">如果长时间没有结果，可以测试失败状态的处理体验。</p>
-                  <button
-                    onClick={() => {
-                      clearAll();
-                      setIsError(true);
-                      setShowError(true);
-                      setAgentSteps((s) => s.map((x, i) => (i === s.length - 1 ? { ...x, status: 'error' } : x)));
-                    }}
-                    className="text-xs font-medium text-secondary hover:text-error transition-colors"
+        {/* Logs */}
+        <Card padding="md" className="slide-up" style={{ animationDelay: '300ms' }}>
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-primary">实时日志</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full pulse-dot text-green-500" />
+              <span className="text-tiny text-text-tertiary">streaming</span>
+            </div>
+          </div>
+          <div className="bg-muted rounded-lg p-4 font-mono text-sm min-h-[160px]">
+            {logs.length > 0 ? (
+              <div className="space-y-1">
+                {logs.map((log, index) => (
+                  <div
+                    key={index}
+                    className="text-text-secondary slide-in-bottom"
+                    style={{ animationDelay: '0ms', animationDuration: '300ms' }}
                   >
-                    查看失败状态 →
-                  </button>
-                </div>
-              </details>
+                    <span className="text-primary mr-2">›</span>
+                    {log}
+                  </div>
+                ))}
+                {!isComplete && (
+                  <div className="text-text-tertiary flex items-center">
+                    <span className="text-primary mr-2">›</span>
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span className="text-text-tertiary pulse-soft">等待开始分析...</span>
             )}
           </div>
+        </Card>
 
-          <div className="flex items-center gap-3">
-            {isCompleting && !hasAutoSubmitted ? (
-              <span className="text-sm text-secondary animate-fade-in">
-                分析完成，正在整理结果...
-              </span>
-            ) : isDone ? (
-              <Button variant="primary" onClick={handleViewResult}>
-                查看结果
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            ) : !isError ? (
-              <Button variant="secondary" onClick={handleRetry}>
-                <RefreshCw className="w-3.5 h-3.5" />
-                重新分析
-              </Button>
-            ) : null}
+        {/* Complete Button */}
+        {isComplete && (
+          <div className="mt-6 slide-up">
+            <div className="mb-3 flex items-center justify-center gap-2 text-success">
+              <Sparkles size={16} className="heartbeat" />
+              <span className="text-sm font-medium">专属面试题已就绪</span>
+            </div>
+            <Button
+              size="lg"
+              className="w-full group hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
+              onClick={handleComplete}
+            >
+              进入面试
+              <ArrowRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform duration-200" />
+            </Button>
           </div>
-        </div>
-      </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -1,14 +1,10 @@
 import React from 'react';
 
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
-  style?: React.CSSProperties;
-  onClick?: () => void;
 }
 
-export function Card({ children, className = '', padding = 'md', style, onClick }: CardProps) {
+export function Card({ padding = 'md', className = '', children, ...props }: CardProps) {
   const paddings = {
     none: '',
     sm: 'p-4',
@@ -17,32 +13,43 @@ export function Card({ children, className = '', padding = 'md', style, onClick 
   };
 
   return (
-    <div
-      className={`bg-surface rounded-xl border border-border ${paddings[padding]} ${className}`}
-      style={style}
-      onClick={onClick}
+    <div 
+      className={`bg-white border border-border rounded-xl shadow-card ${paddings[padding]} ${className}`}
+      {...props}
     >
       {children}
     </div>
   );
 }
 
-interface CardHeaderProps {
-  title: string;
-  subtitle?: string;
-  action?: React.ReactNode;
+export function CardHeader({ className = '', children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={`mb-4 ${className}`} {...props}>
+      {children}
+    </div>
+  );
 }
 
-export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
+export function CardTitle({ className = '', children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-4">
-      <div>
-        <h3 className="text-lg font-semibold text-primary leading-tight">{title}</h3>
-        {subtitle && (
-          <p className="text-sm text-secondary mt-0.5">{subtitle}</p>
-        )}
-      </div>
-      {action && <div className="flex-shrink-0">{action}</div>}
+    <h2 className={`text-h2 text-primary ${className}`} {...props}>
+      {children}
+    </h2>
+  );
+}
+
+export function CardDescription({ className = '', children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p className={`text-small text-text-secondary mt-1 ${className}`} {...props}>
+      {children}
+    </p>
+  );
+}
+
+export function CardContent({ className = '', children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={className} {...props}>
+      {children}
     </div>
   );
 }

@@ -1,35 +1,27 @@
 import React from 'react';
 
 interface BadgeProps {
-  children: React.ReactNode;
-  variant?: 'default' | 'accent' | 'success' | 'warning' | 'error';
+  variant?: 'default' | 'success' | 'warning' | 'error';
   size?: 'sm' | 'md';
+  children: React.ReactNode;
   className?: string;
 }
 
-export function Badge({
-  children,
-  variant = 'default',
-  size = 'md',
-  className = '',
-}: BadgeProps) {
+export function Badge({ variant = 'default', size = 'sm', children, className = '' }: BadgeProps) {
   const variants = {
-    default: 'bg-gray-100 text-secondary',
-    accent: 'bg-accent-light text-accent',
-    success: 'bg-emerald-50 text-emerald-700',
-    warning: 'bg-amber-50 text-amber-700',
-    error: 'bg-red-50 text-red-700',
+    default: 'bg-muted text-text-secondary',
+    success: 'bg-green-50 text-success',
+    warning: 'bg-amber-50 text-warning',
+    error: 'bg-red-50 text-error',
   };
 
   const sizes = {
-    sm: 'px-1.5 py-0.5 text-xs',
-    md: 'px-2 py-1 text-xs',
+    sm: 'px-2 py-0.5 text-xs',
+    md: 'px-2.5 py-1 text-sm',
   };
 
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md font-medium ${variants[variant]} ${sizes[size]} ${className}`}
-    >
+    <span className={`inline-flex items-center font-medium rounded-md ${variants[variant]} ${sizes[size]} ${className}`}>
       {children}
     </span>
   );

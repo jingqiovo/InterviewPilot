@@ -1,12 +1,12 @@
-import React from 'react';
-import { useAppStore } from './store/appStore';
-import { NavBar } from './components/features/NavBar';
-import { HomePage } from './pages/HomePage';
-import { AnalysisPage } from './pages/AnalysisPage';
-import { ResultPage } from './pages/ResultPage';
-import { HistoryPage } from './pages/HistoryPage';
+import { useAppStore } from '@/store/appStore';
+import { ConfirmDialog } from '@/components/features/ConfirmDialog';
+import { HomePage } from '@/pages/HomePage';
+import { AnalysisPage } from '@/pages/AnalysisPage';
+import { InterviewPage } from '@/pages/InterviewPage';
+import { ResultPage } from '@/pages/ResultPage';
+import { HistoryPage } from '@/pages/HistoryPage';
 
-export default function App() {
+function App() {
   const { currentPage } = useAppStore();
 
   const renderPage = () => {
@@ -15,6 +15,8 @@ export default function App() {
         return <HomePage />;
       case 'analysis':
         return <AnalysisPage />;
+      case 'interview':
+        return <InterviewPage />;
       case 'result':
         return <ResultPage />;
       case 'history':
@@ -25,9 +27,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-bg">
-      <NavBar />
+    <div className="min-h-screen bg-white text-primary antialiased">
       {renderPage()}
+      <ConfirmDialog />
     </div>
   );
 }
+
+export default App;

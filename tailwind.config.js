@@ -6,68 +6,62 @@ export default {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-      },
       colors: {
-        surface: '#FFFFFF',
-        bg: '#FAFAFA',
-        border: '#E5E5E5',
-        'border-hover': '#D1D5DB',
-        primary: '#111111',
-        secondary: '#6B7280',
-        tertiary: '#9CA3AF',
-        accent: {
-          DEFAULT: '#4F46E5',
-          hover: '#4338CA',
-          light: '#EEF2FF',
-        },
-        success: '#10B981',
+        // Primary - almost black for professional feel
+        primary: '#111827',
+        'primary-foreground': '#FFFFFF',
+        
+        // Background
+        background: '#FFFFFF',
+        foreground: '#111827',
+        
+        // Secondary
+        secondary: '#F9FAFB',
+        'secondary-foreground': '#111827',
+        
+        // Muted
+        muted: '#F3F4F6',
+        'muted-foreground': '#6B7280',
+        
+        // Accent
+        accent: '#F3F4F6',
+        'accent-foreground': '#111827',
+        
+        // Border
+        border: '#E5E7EB',
+        
+        // Status colors
+        success: '#16A34A',
         warning: '#F59E0B',
-        error: {
-          DEFAULT: '#EF4444',
-          light: '#FEF2F2',
-        },
-      },
-      fontSize: {
-        'xs': ['12px', { lineHeight: '16px', letterSpacing: '0.04em' }],
-        'sm': ['13px', { lineHeight: '20px' }],
-        'base': ['15px', { lineHeight: '24px' }],
-        'lg': ['18px', { lineHeight: '28px' }],
-        'xl': ['22px', { lineHeight: '32px' }],
-        '2xl': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em' }],
+        error: '#DC2626',
+        
+        // Text hierarchy
+        'text-primary': '#111827',
+        'text-secondary': '#6B7280',
+        'text-tertiary': '#9CA3AF',
       },
       borderRadius: {
-        'xl': '12px',
+        'radius': '12px',
       },
-      animation: {
-        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'blink': 'blink 1s step-end infinite',
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'slide-down': 'slideDown 0.3s ease-out',
+      fontSize: {
+        'h1': ['32px', { lineHeight: '1.2', fontWeight: '600' }],
+        'h2': ['20px', { lineHeight: '1.3', fontWeight: '600' }],
+        'h3': ['16px', { lineHeight: '1.4', fontWeight: '500' }],
+        'body': ['15px', { lineHeight: '1.6' }],
+        'small': ['13px', { lineHeight: '1.5' }],
+        'tiny': ['12px', { lineHeight: '1.4' }],
       },
-      keyframes: {
-        blink: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0' },
-        },
-        fadeIn: {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
-        slideUp: {
-          from: { opacity: '0', transform: 'translateY(8px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
-        slideDown: {
-          from: { opacity: '0', transform: 'translateY(-8px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+      },
+      boxShadow: {
+        'card': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'button': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       },
       transitionDuration: {
         '150': '150ms',
-        '300': '300ms',
+        '200': '200ms',
       },
     },
   },

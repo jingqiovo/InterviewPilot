@@ -1,67 +1,36 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
-  loading?: boolean;
 }
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  disabled,
-  className = '',
-  children,
-  ...props
+export function Button({ 
+  variant = 'primary', 
+  size = 'md', 
+  className = '', 
+  children, 
+  ...props 
 }: ButtonProps) {
-  const base =
-    'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
-
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed';
+  
   const variants = {
-    primary:
-      'bg-accent text-white hover:bg-accent-hover focus:ring-accent active:scale-[0.98]',
-    secondary:
-      'bg-white text-primary border border-border hover:border-border-hover hover:bg-gray-50 focus:ring-gray-400 active:scale-[0.98]',
-    ghost:
-      'bg-transparent text-secondary hover:bg-gray-100 hover:text-primary focus:ring-gray-400',
-    danger:
-      'bg-error text-white hover:bg-red-600 focus:ring-error active:scale-[0.98]',
+    primary: 'bg-primary text-white hover:bg-gray-700 active:bg-gray-800',
+    secondary: 'bg-secondary text-primary border border-border hover:bg-muted active:bg-gray-200',
+    ghost: 'text-primary hover:bg-muted active:bg-gray-200',
   };
-
+  
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm gap-1.5',
-    md: 'px-4 py-2.5 text-base gap-2',
-    lg: 'px-6 py-3 text-base gap-2',
+    sm: 'h-8 px-3 text-sm',
+    md: 'h-10 px-4 text-sm',
+    lg: 'h-12 px-6 text-base',
   };
 
   return (
-    <button
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
-      disabled={disabled || loading}
+    <button 
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
-      {loading && (
-        <svg
-          className="animate-spin h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
-      )}
       {children}
     </button>
   );

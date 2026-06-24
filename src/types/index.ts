@@ -1,157 +1,111 @@
-export interface ResumeData {
-  rawText: string;
+export interface Resume {
+  id: string;
+  name: string;
+  content: string;
   fileName?: string;
-  fileSize?: number;
-  uploadTime?: Date;
+  uploadedAt: Date;
 }
 
 export interface JobPosition {
+  id: string;
   title: string;
-  confidence: number;
-  isAutoDetected: boolean;
+  company?: string;
 }
 
-export interface JDData {
-  rawText: string;
-  fileName?: string;
-  uploadTime?: Date;
+export interface JobJD {
+  id: string;
+  content: string;
+  source?: string;
 }
-
-export interface GapItem {
-  category: 'matched' | 'gap' | 'enhance';
-  text: string;
-}
-
-export interface GapAnalysis {
-  matched: GapItem[];
-  gaps: GapItem[];
-  enhancements: GapItem[];
-}
-
-export type AgentStepStatus = 'pending' | 'active' | 'done' | 'error';
 
 export interface AgentStep {
   id: string;
-  label: string;
-  status: AgentStepStatus;
-  timestamp?: string;
-  streamMessages?: StreamMessage[];
+  name: string;
+  status: 'pending' | 'running' | 'completed' | 'error';
+  log?: string;
+  timestamp: Date;
 }
 
-export interface StreamMessage {
+export interface InterviewQuestion {
   id: string;
-  text: string;
-  timestamp: string;
-  type: 'info' | 'thinking' | 'success' | 'error';
+  number: number;
+  question: string;
+  type: 'behavioral' | 'technical' | 'situational';
+  difficulty: 'easy' | 'medium' | 'hard';
+  expectedPoints?: string[];
 }
 
-export type ProblemSeverity = 'high' | 'medium' | 'low';
-
-export interface Problem {
-  id: string;
-  title: string;
-  description: string;
-  severity: ProblemSeverity;
-  section: string;
-  currentText?: string;
-  suggestedFix?: string;
+export interface InterviewAnswer {
+  questionId: string;
+  answer: string;
+  submittedAt: Date;
 }
 
-export interface Recommendation {
-  id: string;
-  category: string;
-  title: string;
-  description: string;
-  priority: number;
-  completed: boolean;
-}
-
-export interface ResumeSection {
-  type: 'header' | 'summary' | 'experience' | 'education' | 'skills' | 'projects';
-  title: string;
-  content: string;
-  modified: boolean;
-}
-
-export interface ResumeScore {
-  total: number;
-  breakdown: {
-    content: number;
-    structure: number;
-    keywords: number;
-    impact: number;
-  };
-  industryAverage: number;
-}
-
-export interface MatchAnalysis {
-  overall: number;
-  skills: number;
-  projects: number;
-  experience: number;
-  matched: string[];
-  missing: string[];
-  keywords: {
-    found: string[];
-    missing: string[];
-  };
-  explanation?: string;
-}
-
-export interface ResumeVersion {
-  version: string;
-  timestamp: string;
+export interface QuestionScore {
+  questionId: string;
   score: number;
-  summary: string;
-  sections: ResumeSection[];
+  feedback: string;
+  highlights: string[];
+  improvements: string[];
 }
 
-export interface AnalysisResult {
+export interface InterviewResult {
   id: string;
-  resume: ResumeData;
-  job: JobPosition;
-  jd?: JDData | null;
-  hasJD: boolean;
-  score: ResumeScore;
-  match: MatchAnalysis;
-  gap: GapAnalysis;
-  problems: Problem[];
-  recommendations: Recommendation[];
-  versions: ResumeVersion[];
-  currentVersion: string;
+  sessionId: string;
+  overallScore: number;
+  scores: {
+    professional: number;
+    communication: number;
+    problemSolving: number;
+  };
+  matchRate: number;
+  diagnoses: Diagnosis[];
+  suggestions: Suggestion[];
+  practiceAreas: string[];
+  completedAt: Date;
+}
+
+export interface Diagnosis {
+  id: string;
+  type: 'strength' | 'weakness' | 'opportunity';
+  title: string;
+  description: string;
+  examples: string[];
+}
+
+export interface Suggestion {
+  id: string;
+  category: 'answer' | 'delivery' | 'structure' | 'content';
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface InterviewSession {
+  id: string;
+  resume: Resume;
+  position: JobPosition;
+  jobJD: JobJD;
+  questions: InterviewQuestion[];
+  answers: InterviewAnswer[];
+  scores: QuestionScore[];
+  currentQuestionIndex: number;
+  status: 'preparing' | 'analyzing' | 'interviewing' | 'scoring' | 'completed' | 'failed';
   agentSteps: AgentStep[];
-  createdAt: string;
+  streamLogs: string[];
+  createdAt: Date;
+  version: number;
 }
 
 export interface HistoryRecord {
   id: string;
-  jobTitle: string;
-  hasJD: boolean;
-  matchPercent?: number;
-  score: number;
-  createdAt: string;
-  versionCount: number;
-  resumeSnippet: string;
-  result: AnalysisResult;
+  sessionId: string;
+  position: JobPosition;
+  overallScore: number;
+  matchRate: number;
+  questionsCount: number;
+  completedAt: Date;
+  version: number;
 }
 
-export type AppPage = 'home' | 'analysis' | 'result' | 'history';
-
-export interface AppState {
-  currentPage: AppPage;
-  resume: ResumeData | null;
-  job: JobPosition | null;
-  jd: JDData | null;
-  analysisResult: AnalysisResult | null;
-  history: HistoryRecord[];
-  error: AppError | null;
-}
-
-export interface AppError {
-  type: 'upload_failed' | 'format_error' | 'parse_error' | 'timeout' | 'dissatisfied' | 'unknown';
-  title: string;
-  message: string;
-  recoverable: boolean;
-  recoverableAction?: string;
-  fallbackAction?: string;
-}
+export type AppPage = 'home' | 'analysis' | 'interview' | 'result' | 'history';

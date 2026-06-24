@@ -1,48 +1,59 @@
-import React from 'react';
-import { Sparkles, History, Home } from 'lucide-react';
-import { useAppStore } from '../../store/appStore';
-import type { AppPage } from '../../types';
+import { History, ArrowLeft } from 'lucide-react';
+import { useAppStore } from '@/store/appStore';
 
-export function NavBar() {
-  const { currentPage, setPage } = useAppStore();
+interface NavBarProps {
+  showBack?: boolean;
+  showHistory?: boolean;
+  title?: string;
+  onBack?: () => void;
+}
 
-  const navItems: { page: AppPage; label: string; icon: React.ReactNode }[] = [
-    { page: 'home', label: '开始分析', icon: <Home className="w-4 h-4" /> },
-    { page: 'history', label: '历史记录', icon: <History className="w-4 h-4" /> },
-  ];
+export function NavBar({ showBack, showHistory = true, title, onBack }: NavBarProps) {
+  const { setCurrentPage } = useAppStore();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-border">
-      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => setPage('home')}
-          className="flex items-center gap-2 group"
-        >
-          <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-base font-semibold text-primary tracking-tight">
-            ResumePilot <span className="text-secondary font-normal">AI</span>
-          </span>
-        </button>
-
-        <nav className="flex items-center gap-1">
-          {navItems.map(({ page, label, icon }) => (
-            <button
-              key={page}
-              onClick={() => setPage(page)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                currentPage === page
-                  ? 'bg-accent-light text-accent'
-                  : 'text-secondary hover:text-primary hover:bg-gray-100'
-              }`}
+    <nav className="sticky top-0 z-40 w-full bg-white border-b border-border">
+      <div className="max-w-3xl mx-auto flex h-14 items-center px-6">
+        {/* Left */}
+        <div className="flex items-center gap-3">
+          {showBack ? (
+            <button 
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-small text-text-secondary hover:text-primary transition-colors"
             >
-              {icon}
-              {label}
+              <ArrowLeft size={16} />
+              <span>返回</span>
             </button>
-          ))}
-        </nav>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-white text-xs font-semibold">AI</span>
+              </div>
+              <span className="font-medium text-primary">InterviewPilot</span>
+            </div>
+          )}
+        </div>
+
+        {/* Center */}
+        {title && (
+          <div className="flex-1 text-center">
+            <span className="text-small text-text-secondary">{title}</span>
+          </div>
+        )}
+
+        {/* Right */}
+        <div className="flex items-center gap-4 ml-auto">
+          {showHistory && (
+            <button 
+              onClick={() => setCurrentPage('history')}
+              className="flex items-center gap-1.5 text-small text-text-secondary hover:text-primary transition-colors"
+            >
+              <History size={16} />
+              <span>历史</span>
+            </button>
+          )}
+        </div>
       </div>
-    </header>
+    </nav>
   );
 }
